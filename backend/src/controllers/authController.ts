@@ -32,7 +32,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             user: {id: new_user._id, username: new_user.username, email: new_user.email}
         })
     } catch (error) {
-        res.status(500).json({message: "Server error"});
+        res.status(500).json({message: "Server error in registering user"});
         console.log(`Error registering user: ${error}`);
         return; 
     }
@@ -64,7 +64,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             user: {id: user.id, username: user.username, email: user.email}
         });
     } catch (error) {
-        res.status(500).json({message: "Server error"});
+        res.status(500).json({message: "Server error in logging in user"});
         console.log(`Error logging in user: ${error}`);
         return;
     }
