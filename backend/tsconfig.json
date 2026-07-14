@@ -7,12 +7,12 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "target": "esnext",
-    "types": [],
     // For nodejs:
     // "lib": ["esnext"],
-    // "types": ["node"],
+    "types": ["node"],
     // and npm install -D @types/node
 
     // Other Outputs
@@ -33,6 +33,7 @@
     // "noPropertyAccessFromIndexSignature": true,
 
     // Recommended Options
+    "allowJs": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -43,5 +44,6 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

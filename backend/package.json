@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/app.ts"
   },
+  "type": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",
