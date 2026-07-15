@@ -1,15 +1,23 @@
-const API_URL = process.env.API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-    const token = (typeof window !== "undefined") ? localStorage.getItem("token") : null;
+    const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
     const headers = {
-        'ContentType': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-        ...options.headers
+        "Content-Type": "application/json",
+        ...(token && token !== "undefined" && { 'Authorization': `Bearer ${token}` }),
+        ...options.headers,
     };
 
-    const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+    const formattedEndpoint = endpoint.startsWith("/")
+        ? endpoint
+        : `/${endpoint}`;
+
+    const response = await fetch(`${API_URL}${formattedEndpoint}`, {
+        ...options,
+        headers,
+    });
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
@@ -17,4 +25,4 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     }
 
     return response.json();
-}
+};

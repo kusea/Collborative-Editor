@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../utils/api";
@@ -13,44 +15,61 @@ export default function Dashboard() {
     const [docs, setDocs] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
-    const [user, setUser] = useState<{ username: string } | null>(() => {
-        const storedUser =
-            typeof window !== "undefined" ? localStorage.getItem("user") : null;
-        return storedUser ? JSON.parse(storedUser) : null;
-    });
+    const [user, setUser] = useState<{ username: string } | null>(null);
     const router = useRouter();
 
     const fetchDocuments = async () => {
-        await apiFetch("/documents")
-            .then((response) => setDocs(response.data))
-            .catch(() => setDocs([]))
-            .finally(() => setLoading(false));
+        try {
+            const documents = await apiFetch("/documents");
+            setDocs(documents);
+        } catch (error) {
+            console.error("Error fetching documents:", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const checkAuthandSetUser = () => {
+            const token = localStorage.getItem("token");
+            if (!token || token === "undefined") {
+                localStorage.removeItem('token');
+                router.push("/auth");
+                return;
+            }
 
-        if (!token) {
-            router.push("/auth");
-            return;
-        }
+            const storedUser =
+                typeof window !== "undefined"
+                    ? localStorage.getItem("user")
+                    : null;
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
 
-        fetchDocuments();
+            fetchDocuments();
+        };
+
+        checkAuthandSetUser();
     }, [router]);
 
     const handleCreateDocuments = async () => {
         setCreating(true);
         const title =
             prompt("Enter new document title:") || "Untitled Document";
-        await apiFetch("/documents", {
-            method: "POST",
-            body: JSON.stringify({ title }),
-        })
-            .then((response) => setDocs([response.data, ...docs]))
-            .catch((error) => {
-                alert(`Failed to create document: ${error.message}`);
-            })
-            .finally(() => setCreating(false));
+        try {
+            const newDoc = await apiFetch("/documents", {
+                method: "POST",
+                body: JSON.stringify({ title }),
+            });
+            console.log("New document created:", newDoc);
+            setDocs([newDoc, ...docs]);
+            await fetchDocuments();
+        } catch (error) {
+            console.error("Error creating document:", error);
+        } finally {
+            setCreating(false);
+        }
+        
     };
 
     const handleLogout = () => {
@@ -71,8 +90,7 @@ export default function Dashboard() {
         <div className="min-h-screen bg-slate-50">
             <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
                 <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <FileText className="text-indigo-600" /> AI-powered RAG
-                    System
+                    <FileText className="text-indigo-600" /> Collaborative Editor Document
                 </h1>
                 <div className="flex items-center gap-4">
                     <span className="text-sm text-slate-600">
@@ -111,7 +129,7 @@ export default function Dashboard() {
                         Create new document
                     </button>
 
-                    {docs.length === 0 ? (
+                    {(docs.length === 0) ? (
                         <div className="text-center py-16 bg-white border border-slate-200 rounded-xl">
                             <FileText className="mx-auto h-12 w-12 text-slate-300 mb-4" />
                             <h3 className="text-lg font-medium text-slate-700">
@@ -122,27 +140,27 @@ export default function Dashboard() {
                             </p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                             {docs.map((doc) => (
                                 <div
-                                    key={doc._id}
+                                    key={doc?._id}
                                     className="bg-white border border-slate-200 rounded-xl">
                                     <div className="p-4">
                                         <div className="p-2 bg-indigo-50 rounded-lg w-fit text-indigo-600 mb-4">
                                             <FileText size={20} />
                                         </div>
                                         <h3 className="font-semibold text-slate-800 text-lg truncate mb-1">
-                                            {doc.title}
+                                            {doc?.title || "Untitled Document"}
                                         </h3>
                                         <p className="text-xs text-slate-400">
                                             Updating:{" "}
                                             {new Date(
-                                                doc.updatedAt,
+                                                doc?.updatedAt,
                                             ).toLocaleDateString("vi-VN")}
                                         </p>
                                     </div>
-                                    <div className="mt-4 pt-4 border-t border-slate-100 text-right">
-                                        <span className="text-xs font-semibold text-indigo-600 group-hover:underline">
+                                    <div className="py-2 border-t border-slate-100 text-right">
+                                        <span className="text-xs font-semibold text-indigo-600 hover:underline">
                                             Open document →
                                         </span>
                                     </div>

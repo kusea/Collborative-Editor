@@ -22,8 +22,9 @@ connectDB();
 app.post('/api/auth/register', register);
 app.post('/api/auth/login', login);
 
+app.post('/api/documents', protect, createDocument);
 app.get('/api/documents', protect, getDocument);
-app.post('/api/documents', protect, getDocument);
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

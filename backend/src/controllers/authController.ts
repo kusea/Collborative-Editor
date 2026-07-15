@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import { User } from "../models/User.js";
 
 const generateToken = (id: string) => {
-    return jwt.sign({id}, process.env.JWT_SECRET as string, {expiresIn: "7d"});
+    return jwt.sign({id}, process.env.JWT_SECRET || "", {expiresIn: "7d"});
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -27,8 +27,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
         const new_user = await User.create({username, email, password: hashedPass});
 
+        const token = generateToken(new_user._id.toString());
+        console.log(`Token: ${token}`);
+
         res.status(201).json({
-            token: generateToken(new_user._id.toString()),
+            token: token,
             user: {id: new_user._id, username: new_user.username, email: new_user.email}
         })
     } catch (error) {
@@ -59,9 +62,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             return; 
         }
 
+        const token = generateToken(user._id.toString());
+        console.log(`Token: ${token}`);
+
         res.status(201).json({
-            token: generateToken(user._id.toString()),
-            user: {id: user.id, username: user.username, email: user.email}
+            token: token,
+            user: {id: user._id, username: user.username, email: user.email}
         });
     } catch (error) {
         res.status(500).json({message: "Server error in logging in user"});

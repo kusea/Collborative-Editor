@@ -16,7 +16,11 @@ export const createDocument = async (req: AuthRequest, res: Response): Promise<v
             title: title || "Untitled Document", 
             owner: ownerId
         });
-        res.status(200).json(newDocument);
+
+        const responseData = newDocument.toObject();
+
+        console.log(`Document: ${JSON.stringify(responseData)}`);
+        res.status(200).json(responseData);
     } catch (error) {
         res.status(500).json({message: "Server error in creating a new document"});
         console.log(`Error creating a new document: ${error}`);
@@ -32,7 +36,8 @@ export const getDocument = async (req: AuthRequest, res: Response): Promise<void
             res.status(401).json({message: "Not authorized"});
             return;
         }
-        const docs = await Document.find({owner: ownerId}).sort({ updatedAt: -1 });
+        const docs = await Document.find({owner: ownerId}).sort({ updatedAt: -1 }).lean();
+        
         res.status(200).json(docs);
     } catch (error) {
         res.status(500).json({message: "Server error in getting a document"});
