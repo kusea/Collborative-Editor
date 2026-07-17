@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { ArrowLeft, Loader2, Save, Wifi, WifiOff } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Wifi, WifiOff, Italic, Bold, Underline } from "lucide-react";
 import { apiFetch } from "../../utils/api";
+import Placeholder from "@tiptap/extension-placeholder";
 
 const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "");
@@ -24,17 +25,25 @@ export default function DocumentPage({ params }: PageProps) {
     const [connected, setConnected] = useState(false);
     const [loading, setLoading] = useState(true);
     const [docTitle, setDocTitle] = useState("Loading document...");
+    const [reRenderTrigger, setReRenderTrigger] = useState(0);
 
     // Cấu hình trình soạn thảo Tiptap
     const editor = useEditor({
-        extensions: [StarterKit],
-        content: "<p>Start typing content here...</p>",
+        extensions: [StarterKit,
+            Placeholder.configure({
+                placeholder: "Start typing here...",
+                emptyEditorClass: "is-editor-empty",
+            }),
+        ],
         editorProps: {
             attributes: {
-                class: "prose max-w-none focus:outline-none min-h-[400px] text-slate-800 p-4",
+                class: "prose max-w-none focus:outline-none min-h-100 text-slate-800 p-4",
             },
         },
         immediatelyRender: true,
+        onTransaction: () => {
+            setReRenderTrigger(reRenderTrigger + 1);
+        }
     });
 
     useEffect(() => {
@@ -96,7 +105,7 @@ export default function DocumentPage({ params }: PageProps) {
             try {
                 const response = await apiFetch("/documents");
                 if (response && Array.isArray(response)) {
-                    const currentDoc = response.find((doc) => doc.id === docId);
+                    const currentDoc = response.find((doc) => doc._id === docId);
                     if (currentDoc) {
                         setDocTitle(currentDoc.title);
                         if (currentDoc.content && editor)
@@ -169,7 +178,7 @@ export default function DocumentPage({ params }: PageProps) {
 
             {/* Document editor */}
             <main className="flex-1 max-w-4xl w-full mx-auto p-6">
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-125 overflow-hidden flex flex-col">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-125 overflow-hidden flex flex-col text-black">
                     {/* Thanh công cụ định dạng đơn giản */}
                     <div className="bg-slate-50 border-b border-slate-200 p-2.5 flex items-center gap-1 flex-wrap">
                         <button
@@ -184,8 +193,8 @@ export default function DocumentPage({ params }: PageProps) {
                                     .toggleBold()
                                     .run()
                             }
-                            className={`px-3 py-1 text-sm font-bold rounded-md hover:bg-slate-200 transition ${editor?.isActive("bold") ? "bg-slate-300" : ""}`}>
-                            B
+                            className={`px-3 py-1 text-sm font-bold rounded-md hover:bg-slate-200 transition ${editor?.isActive("bold") ? "bg-slate-400" : ""}`}>
+                            <Bold className="h-4 w-4" />
                         </button>
                         <button
                             onClick={() =>
@@ -199,23 +208,23 @@ export default function DocumentPage({ params }: PageProps) {
                                     .toggleItalic()
                                     .run()
                             }
-                            className={`px-3 py-1 text-sm italic rounded-md hover:bg-slate-200 transition ${editor?.isActive("italic") ? "bg-slate-300" : ""}`}>
-                            I
+                            className={`px-3 py-1 text-sm italic rounded-md hover:bg-slate-200 transition ${editor?.isActive("italic") ? "bg-slate-400" : ""}`}>
+                            <Italic className="h-4 w-4" />
                         </button>
                         <button
                             onClick={() =>
-                                editor?.chain().focus().toggleStrike().run()
+                                editor?.chain().focus().toggleUnderline().run()
                             }
                             disabled={
                                 !editor
                                     ?.can()
                                     .chain()
                                     .focus()
-                                    .toggleStrike()
+                                    .toggleUnderline()
                                     .run()
                             }
-                            className={`px-3 py-1 text-sm line-through rounded-md hover:bg-slate-200 transition ${editor?.isActive("strike") ? "bg-slate-300" : ""}`}>
-                            S
+                            className={`px-3 py-1 text-sm underline rounded-md hover:bg-slate-200 transition ${editor?.isActive("underline") ? "bg-slate-400" : ""}`}>
+                            <Underline className="h-4 w-4" />
                         </button>
                     </div>
 
