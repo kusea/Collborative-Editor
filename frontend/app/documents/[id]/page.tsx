@@ -34,6 +34,7 @@ export default function DocumentPage({ params }: PageProps) {
                 class: "prose max-w-none focus:outline-none min-h-[400px] text-slate-800 p-4",
             },
         },
+        immediatelyRender: true,
     });
 
     useEffect(() => {
@@ -47,7 +48,7 @@ export default function DocumentPage({ params }: PageProps) {
 
             // 1. Kết nối tới Socket Server kèm theo token JWT trong handshake
             const socketInstance: Socket = io(BACKEND_URL, {
-                auth: { token },
+                auth: { token: token },
                 transports: ["websocket"],
             });
 
@@ -72,6 +73,15 @@ export default function DocumentPage({ params }: PageProps) {
                     router.push("/auth");
                 }
             });
+
+            socketInstance.on("reconnect_attempt", (attempts) => {
+                console.log(
+                    `Reconnecting to WebSocket Server (attempt ${attempts})`);
+            })
+
+            socketInstance.on("reconnect_failed", () => {
+                console.log("Reconnection to WebSocket Server Failed");
+            })
 
             setSocket(socketInstance);
             setLoading(false);

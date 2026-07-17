@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../utils/api";
-import { FileText, Plus, LogOutIcon, Loader2 } from "lucide-react";
+import { FileText, Plus, LogOutIcon, Loader2, Trash2 } from "lucide-react";
+import { useQuery, QueryClient, useMutation } from "@tanstack/react-query";
 
 interface DocumentItem {
     _id: string;
@@ -12,22 +13,14 @@ interface DocumentItem {
 }
 
 export default function Dashboard() {
-    const [docs, setDocs] = useState<DocumentItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [creating, setCreating] = useState(false);
     const [user, setUser] = useState<{ username: string } | null>(null);
     const router = useRouter();
-
-    const fetchDocuments = async () => {
-        try {
-            const documents = await apiFetch("/documents");
-            setDocs(documents);
-        } catch (error) {
-            console.error("Error fetching documents:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const queryClient = new QueryClient();
+    const {data: docs = [], isLoading, isError} = useQuery<DocumentItem[]>({
+        queryKey: ["documents"],
+        queryFn: () => apiFetch("/documents"),
+        retry: 1
+    })
 
     useEffect(() => {
         const checkAuthandSetUser = () => {
@@ -45,32 +38,48 @@ export default function Dashboard() {
             if (storedUser) {
                 setUser(JSON.parse(storedUser));
             }
-
-            fetchDocuments();
         };
 
         checkAuthandSetUser();
     }, [router]);
 
-    const handleCreateDocuments = async () => {
-        setCreating(true);
+    const createMutation = useMutation({
+        mutationFn: (title: string) => apiFetch("/documents", {
+            method: 'POST',
+            body: JSON.stringify({title})
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["documents"]});
+        },
+        onError: (error) => {
+            console.error("Error creating document:", error);
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => apiFetch(`/documents/${id}`, {
+            method: 'DELETE'
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["documents"]});
+        },
+        onError: (error) => {
+            console.error("Error deleting document:", error);
+        }
+    });
+
+    const handleCreateDocuments = () => {
         const title =
             prompt("Enter new document title:") || "Untitled Document";
-        try {
-            const newDoc = await apiFetch("/documents", {
-                method: "POST",
-                body: JSON.stringify({ title }),
-            });
-            console.log("New document created:", newDoc);
-            setDocs([newDoc, ...docs]);
-            await fetchDocuments();
-        } catch (error) {
-            console.error("Error creating document:", error);
-        } finally {
-            setCreating(false);
-        }
-        
+        createMutation.mutate(title);
     };
+
+    const handleDeleteDocuments = (e: React.MouseEvent<HTMLButtonElement>, id: string, title: string) => {
+        e.stopPropagation(); // Prevent the click event from bubbling up to the parent element
+        if (confirm(`Are you sure you want to delete "${title}"?`)) {
+            deleteMutation.mutate(id);
+        }
+    }
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -78,10 +87,18 @@ export default function Dashboard() {
         router.push("/auth");
     };
 
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <p className="text-red-500">Error fetching documents</p>
             </div>
         );
     }
@@ -90,7 +107,8 @@ export default function Dashboard() {
         <div className="min-h-screen bg-slate-50">
             <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
                 <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <FileText className="text-indigo-600" /> Collaborative Editor Document
+                    <FileText className="text-indigo-600" /> Collaborative
+                    Editor Document
                 </h1>
                 <div className="flex items-center gap-4">
                     <span className="text-sm text-slate-600">
@@ -119,9 +137,9 @@ export default function Dashboard() {
 
                     <button
                         onClick={handleCreateDocuments}
-                        disabled={creating}
+                        disabled={createMutation.isPending}
                         className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow transition disabled:opacity-50">
-                        {creating ? (
+                        {createMutation.isPending ? (
                             <Loader2 className="animate-spin h-4 w-4" />
                         ) : (
                             <Plus size={16} />
@@ -129,7 +147,7 @@ export default function Dashboard() {
                         Create new document
                     </button>
 
-                    {(docs.length === 0) ? (
+                    {docs.length === 0 ? (
                         <div className="text-center py-16 bg-white border border-slate-200 rounded-xl">
                             <FileText className="mx-auto h-12 w-12 text-slate-300 mb-4" />
                             <h3 className="text-lg font-medium text-slate-700">
@@ -146,21 +164,28 @@ export default function Dashboard() {
                                     key={doc?._id}
                                     className="bg-white border border-slate-200 rounded-xl">
                                     <div className="p-4">
-                                        <div className="p-2 bg-indigo-50 rounded-lg w-fit text-indigo-600 mb-4">
-                                            <FileText size={20} />
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="p-2 bg-indigo-50 rounded-lg w-fit text-indigo-600 mb-4">
+                                                <FileText size={20} />
+                                            </div>
+                                            <button
+                                                title = {"Delete document"}
+                                                onClick={(e) => handleDeleteDocuments(e, doc._id, doc.title)}
+                                                className="p-2 rounded-md hover:bg-red-50 hover:text-red-400 transition opacity-0 hover:opacity-100">
+                                                <Trash2 size={20} />
+                                            </button>
                                         </div>
+
                                         <h3 className="font-semibold text-slate-800 text-lg truncate mb-1">
-                                            {doc?.title || "Untitled Document"}
+                                            {doc.title || "Untitled Document"}
                                         </h3>
                                         <p className="text-xs text-slate-400">
                                             Updating:{" "}
-                                            {new Date(
-                                                doc?.updatedAt,
-                                            ).toLocaleDateString("vi-VN")}
+                                            {new Date(doc.updatedAt).toLocaleDateString("vi-VN")}
                                         </p>
                                     </div>
                                     <div
-                                        onClick={() => router.push(`/documents/${doc?._id}`)} 
+                                        onClick={() => router.push(`/documents/${doc._id}`)}
                                         className="py-2 border-t border-slate-100 text-right">
                                         <span className="text-xs font-semibold text-indigo-600 hover:underline">
                                             Open document →
