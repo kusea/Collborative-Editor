@@ -159,7 +159,9 @@ export default function Dashboard() {
                                             ).toLocaleDateString("vi-VN")}
                                         </p>
                                     </div>
-                                    <div className="py-2 border-t border-slate-100 text-right">
+                                    <div
+                                        onClick={() => router.push(`/documents/${doc?._id}`)} 
+                                        className="py-2 border-t border-slate-100 text-right">
                                         <span className="text-xs font-semibold text-indigo-600 hover:underline">
                                             Open document →
                                         </span>
