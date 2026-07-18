@@ -8,6 +8,7 @@ import { DocumentController } from './controllers/docController.js';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from "jsonwebtoken";
+import * as Y from 'yjs';
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ const io = new Server(httpServer, {
     }
 });
 
+const activeDocs = new Map<string, Y.Doc>();
+
 io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) 
@@ -64,6 +67,35 @@ io.on("connection", (socket) => {
 
         socket.join(docId);
         console.log(`User ${socket.data.userId} joined document ${docId}`);
+
+        if(!activeDocs.has(docId)){
+            activeDocs.set(docId, new Y.Doc());
+        }
+
+        const yDoc = activeDocs.get(docId)!;
+        // Send current state of the server to the client that joined to initially sync
+        const currentUpdate = Y.encodeStateAsUpdate(yDoc);
+        socket.emit("init-document-state", currentUpdate);
+    });
+
+    // Handle the binary update that the client sends
+    socket.on("update-document", ({docId, update}: {docId: string, update: Uint8Array}) => {
+        if (!activeDocs.has(docId)) return;
+        const yDoc = activeDocs.get(docId);
+        if (!yDoc) return;
+
+        try {
+            // Transfer the update from the Nodejs data to the form of Uint8Array for Yjs to resolve 
+            const binaryUpdate = new Uint8Array(update);
+
+            // Merge the update into the document
+            Y.applyUpdate(yDoc, binaryUpdate);
+
+            // Spread or broadcast the update to other clients
+            socket.to(docId).emit("document-broadcast", binaryUpdate);
+        } catch (error) {
+            console.error("Error applying update:", error);
+        }
     });
 
     socket.on("disconnect", ()=> {

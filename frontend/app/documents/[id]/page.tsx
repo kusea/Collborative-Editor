@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -8,6 +8,8 @@ import StarterKit from "@tiptap/starter-kit";
 import { ArrowLeft, Loader2, Save, Wifi, WifiOff, Italic, Bold, Underline } from "lucide-react";
 import { apiFetch } from "../../utils/api";
 import Placeholder from "@tiptap/extension-placeholder";
+import Collaboration from "@tiptap/extension-collaboration";
+import * as Y from "yjs";
 
 const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "");
@@ -27,9 +29,19 @@ export default function DocumentPage({ params }: PageProps) {
     const [docTitle, setDocTitle] = useState("Loading document...");
     const [reRenderTrigger, setReRenderTrigger] = useState(0);
 
+    // Initialize a Y.Doc Object for document through useRef
+    const yDocRef = useRef<Y.Doc>(new Y.Doc());
+
     // Cấu hình trình soạn thảo Tiptap
     const editor = useEditor({
-        extensions: [StarterKit,
+        extensions: [
+            StarterKit.configure({
+                // Disable history since the Collaboration extension will handle it
+            }),
+            Collaboration.configure({
+                
+                field: "shared-content",
+            }),
             Placeholder.configure({
                 placeholder: "Start typing here...",
                 emptyEditorClass: "is-editor-empty",
@@ -47,6 +59,8 @@ export default function DocumentPage({ params }: PageProps) {
     });
 
     useEffect(() => {
+        const ydoc = yDocRef.current;
+        let socketInstance : Socket | null = null;
         const socketConnect = async () => {
             const token = localStorage.getItem("token");
             if (!token || token === "undefined") {
@@ -56,7 +70,7 @@ export default function DocumentPage({ params }: PageProps) {
             }
 
             // 1. Kết nối tới Socket Server kèm theo token JWT trong handshake
-            const socketInstance: Socket = io(BACKEND_URL, {
+            socketInstance = io(BACKEND_URL, {
                 auth: { token: token },
                 transports: ["websocket"],
             });
@@ -66,7 +80,15 @@ export default function DocumentPage({ params }: PageProps) {
                 console.log("Connected to WebSocket Server ✅");
 
                 // 2. Tham gia vào phòng của tài liệu cụ thể
-                socketInstance.emit("join-document", docId);
+                socketInstance?.emit("join-document", docId);
+            });
+
+            socketInstance.on("init-document-state", (update: ArrayBuffer) => {
+                Y.applyUpdate(ydoc, new Uint8Array(update), "server-init");
+            });
+
+            socketInstance.on("document-broadcast", (update: ArrayBuffer) => {
+                Y.applyUpdate(ydoc, new Uint8Array(update), "remote-update");
             });
 
             socketInstance.on("disconnect", () => {
@@ -94,12 +116,19 @@ export default function DocumentPage({ params }: PageProps) {
 
             setSocket(socketInstance);
             setLoading(false);
-
-            // Hủy kết nối khi Component Unmount
-            return () => {
-                socketInstance.disconnect();
-            };
         };
+
+        const handleYDocUpdate = (update: Uint8Array, origin: string) => {
+            if (origin === "remote-update" || origin === "server-init") return;
+
+            if (socketInstance && socketInstance.connected){ 
+                socketInstance?.emit("update-document", {
+                    docId,
+                    update: update
+                });
+            }
+        };
+        ydoc.on("update", handleYDocUpdate);
 
         const fetchDocument = async() => {
             try {
@@ -108,8 +137,9 @@ export default function DocumentPage({ params }: PageProps) {
                     const currentDoc = response.find((doc) => doc._id === docId);
                     if (currentDoc) {
                         setDocTitle(currentDoc.title);
-                        if (currentDoc.content && editor)
-                            editor?.commands.setContent(currentDoc.content);
+                        // When use Collaboration, setContent will be managed by Server automatically resolved through "init-document-state"
+                        /* if (currentDoc.content && editor)
+                            editor?.commands.setContent(currentDoc.content); */
                     } else setDocTitle("Document not found");
                 }
             } catch (error) {
@@ -120,7 +150,15 @@ export default function DocumentPage({ params }: PageProps) {
         fetchDocument();
         socketConnect();
         
-    }, [docId, router, editor]);
+        return () => {
+            ydoc.off("update", handleYDocUpdate);
+            if (socketInstance) {
+                socketInstance.off("init-document-state");
+                socketInstance.off("document-broadcast");
+                socketInstance.disconnect();
+            }
+        }
+    }, [docId, router]);
 
     if (loading) {
         return (

@@ -18,7 +18,9 @@
         "dotenv": "^17.4.2",
         "express": "^5.2.1",
         "jsonwebtoken": "^9.0.3",
-        "mongoose": "^9.7.4"
+        "mongoose": "^9.7.4",
+        "socket.io": "^4.8.3",
+        "yjs": "^13.6.31"
     },
     "devDependencies": {
         "@types/bcrypt": "^6.0.0",
@@ -26,6 +28,7 @@
         "@types/express": "^5.0.6",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^26.1.1",
+        "@types/socket.io": "^3.0.1",
         "tsx": "^4.23.1",
         "typescript": "^7.0.2"
     }
