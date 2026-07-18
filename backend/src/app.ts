@@ -8,7 +8,7 @@ import { DocumentController } from './controllers/docController.js';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from "jsonwebtoken";
-import * as Y from 'yjs';
+import * as Y from "yjs";
 
 dotenv.config();
 
@@ -79,7 +79,7 @@ io.on("connection", (socket) => {
     });
 
     // Handle the binary update that the client sends
-    socket.on("update-document", ({docId, update}: {docId: string, update: Uint8Array}) => {
+    socket.on("update-document", ({docId, update}: {docId: string, update: Buffer}) => {
         if (!activeDocs.has(docId)) return;
         const yDoc = activeDocs.get(docId);
         if (!yDoc) return;
