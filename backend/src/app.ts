@@ -80,6 +80,13 @@ io.on("connection", (socket) => {
 
     // Handle the binary update that the client sends
     socket.on("update-document", ({docId, update}: {docId: string, update: Buffer}) => {
+        /* console.log(`[Socket] Nhận update từ phòng: ${docId}`);
+        console.log(
+            `[Type Check] Kiểu dữ liệu nhận được:`,
+            update.constructor.name,
+        ); // Sẽ in ra: Buffer
+        console.log(`[Size Check] Kích thước gói tin: ${update.length} bytes`); */
+
         if (!activeDocs.has(docId)) return;
         const yDoc = activeDocs.get(docId);
         if (!yDoc) return;
@@ -90,9 +97,11 @@ io.on("connection", (socket) => {
 
             // Merge the update into the document
             Y.applyUpdate(yDoc, binaryUpdate);
+            //console.log(`[Yjs] Gộp trạng thái thành công cho tài liệu ${docId}. Trạng thái hiện tại:`, yDoc.getText('shared-content').toString());
 
             // Spread or broadcast the update to other clients
             socket.to(docId).emit("document-broadcast", binaryUpdate);
+            //console.log(`[Socket] Đã broadcast update tới các thành viên khác trong phòng: ${docId}`);
         } catch (error) {
             console.error("Error applying update:", error);
         }

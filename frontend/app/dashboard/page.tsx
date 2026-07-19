@@ -16,11 +16,6 @@ export default function Dashboard() {
     const [user, setUser] = useState<{ username: string } | null>(null);
     const router = useRouter();
     const queryClient = new QueryClient();
-    const {data: docs = [], isLoading, isError} = useQuery<DocumentItem[]>({
-        queryKey: ["documents"],
-        queryFn: () => apiFetch("/documents"),
-        retry: 1
-    })
 
     useEffect(() => {
         const checkAuthandSetUser = () => {
@@ -42,6 +37,17 @@ export default function Dashboard() {
 
         checkAuthandSetUser();
     }, [router]);
+
+    const { data: docs = [], isLoading, isError} = useQuery<DocumentItem[]>({
+        queryKey: ["documents"],
+        queryFn: () => apiFetch("/documents", {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+            }),
+        retry: 1,
+    });
 
     const createMutation = useMutation({
         mutationFn: (title: string) => apiFetch("/documents", {
