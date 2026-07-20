@@ -81,14 +81,6 @@ io.on("connection", (socket) => {
         socket.emit("init-document-state", currentUpdate);
     });
 
-    socket.on("edit-document", ({docId, update}: {docId: string, update: Buffer}) => {
-        // Broadcast the update to other users
-        socket.to(docId).emit("update-document", {docId, update});
-
-        // Update the document buffer to store permanently on MongoDB
-        documentBuffer.updateDocument(docId, update.toString());
-    })
-
     // Handle the binary update that the client sends
     socket.on("update-document", ({docId, update}: {docId: string, update: Buffer}) => {
         /* console.log(`[Socket] Nhận update từ phòng: ${docId}`);
@@ -108,11 +100,14 @@ io.on("connection", (socket) => {
 
             // Merge the update into the document
             Y.applyUpdate(yDoc, binaryUpdate);
-            //console.log(`[Yjs] Gộp trạng thái thành công cho tài liệu ${docId}. Trạng thái hiện tại:`, yDoc.getText('shared-content').toString());
+            console.log(`[Yjs] Gộp trạng thái thành công cho tài liệu ${docId}. Trạng thái hiện tại:`, yDoc.getText('shared-content').toString());
 
             // Spread or broadcast the update to other clients
             socket.to(docId).emit("document-broadcast", binaryUpdate);
-            //console.log(`[Socket] Đã broadcast update tới các thành viên khác trong phòng: ${docId}`);
+            console.log(`[Socket] Đã broadcast update tới các thành viên khác trong phòng: ${docId}`);4
+
+            // Update the document buffer to store permanently on MongoDB
+            documentBuffer.updateDocument(docId, update.toString());
         } catch (error) {
             console.error("Error applying update:", error);
         }
@@ -127,7 +122,7 @@ const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const gratefulShutdown = async (signal: string) => {
-    console.log(`Received ${signal}, shutting down gracefully...`);
+    console.log(`Received [${signal}], shutting down gracefully...`);
     await documentBuffer.flushAll();
     process.exit(0);
 }

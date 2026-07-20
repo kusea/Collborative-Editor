@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useRef } from "react";
+import { useEffect, useState, use, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import {EditorContent, Editor, useEditor } from "@tiptap/react";
@@ -10,6 +10,9 @@ import { apiFetch } from "../../utils/api";
 import Placeholder from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
 import * as Y from "yjs";
+
+import { usePresenceTracking } from "./hooks/usePresenceTrack";
+import { PresenceOverlayProps } from "./components/PresenceOverlay";
 
 const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "");
@@ -75,6 +78,15 @@ export default function DocumentPage({ params }: PageProps) {
             }
         }
     })
+
+    const currentUser = useMemo(
+        () => ({
+            id: localStorage.getItem("id") || "",
+            name: localStorage.getItem("name") || "",
+            color: localStorage.getItem("color") || "",
+        }),
+        []
+    )
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -168,6 +180,18 @@ export default function DocumentPage({ params }: PageProps) {
             socketRef.current = null;
         }
     }, [docId, router, ydoc]);
+
+    /* const { remotePresences, emitSelectionChange } = usePresenceTracking(
+        socketRef.current!,
+        docId,
+        currentUser
+    ) */
+
+    /* const handleSelect = () => {
+        if (editorRef.current) {
+            const start = editorRef.current.selectionStart;
+        }
+    } */
 
     if (loading) {
         return (

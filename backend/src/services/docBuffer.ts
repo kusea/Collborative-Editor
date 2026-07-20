@@ -13,6 +13,10 @@ class DocumentBufferService {
     private DEBOUNCE_DELAY = 3000;
     private MAX_WAIT_DELAY = 10000;
 
+    public getBufferCount(): number {
+        return this.buffers.size;
+    }
+
     public updateDocument(docId: string, newContent: string){
         if(!this.buffers.has(docId)){
             this.buffers.set(docId, {
@@ -56,8 +60,9 @@ class DocumentBufferService {
                 updatedAt: Date.now()
             });
             item.lastSaveAt = Date.now();
+            console.log(`[Database] Đã lưu thành công Document ${docId} xuống MongoDB.`);
         } catch (error) {
-            console.error(`Error updating document ${docId}: ${error}`);
+            console.error(`[Database Error] Error updating document ${docId}: ${error}`);
         } finally {
             this.buffers.delete(docId);
         }
