@@ -11,6 +11,8 @@ import { protect } from './middlewares/auth.js';
 import { register, login } from './controllers/authController.js';
 import { DocumentController } from './controllers/docController.js';
 import { documentBuffer } from './services/docBuffer.js';
+import { registerPresenceHandlers } from './socket/register-presence.js';
+import { handleAIEdit } from './controllers/AIController.js'; 
 
 
 dotenv.config();
@@ -32,6 +34,9 @@ app.post('/api/auth/login', login);
 app.post('/api/documents', protect, DocumentController.createDocument);
 app.get('/api/documents', protect, DocumentController.getDocument);
 app.delete('/api/documents/:id', protect, DocumentController.deleteDocument);
+
+//AI
+app.post('/api/ai/edit', protect, handleAIEdit);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -112,6 +117,9 @@ io.on("connection", (socket) => {
             console.error("Error applying update:", error);
         }
     });
+
+    // Display the others' moving pointer and highlight area with their name tag
+    registerPresenceHandlers(socket);
 
     socket.on("disconnect", ()=> {
         console.log(`Client disconnected: ${socket.id}`);
