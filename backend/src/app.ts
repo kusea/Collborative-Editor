@@ -1,14 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB } from './config/database.js';
-import { protect } from './middlewares/auth.js';
-import { register, login } from './controllers/authController.js';
-import { DocumentController } from './controllers/docController.js';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from "jsonwebtoken";
 import * as Y from "yjs";
+
+import { connectDB } from './config/database.js';
+import { protect } from './middlewares/auth.js';
+import { register, login } from './controllers/authController.js';
+import { DocumentController } from './controllers/docController.js';
+import { documentBuffer } from './services/docBuffer.js';
+
 
 dotenv.config();
 
@@ -78,6 +81,14 @@ io.on("connection", (socket) => {
         socket.emit("init-document-state", currentUpdate);
     });
 
+    socket.on("edit-document", ({docId, update}: {docId: string, update: Buffer}) => {
+        // Broadcast the update to other users
+        socket.to(docId).emit("update-document", {docId, update});
+
+        // Update the document buffer to store permanently on MongoDB
+        documentBuffer.updateDocument(docId, update.toString());
+    })
+
     // Handle the binary update that the client sends
     socket.on("update-document", ({docId, update}: {docId: string, update: Buffer}) => {
         /* console.log(`[Socket] Nhận update từ phòng: ${docId}`);
@@ -114,4 +125,14 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+const gratefulShutdown = async (signal: string) => {
+    console.log(`Received ${signal}, shutting down gracefully...`);
+    await documentBuffer.flushAll();
+    process.exit(0);
+}
+
+// Specify the normal exit signal for the system to identify.
+process.on('SIGTERM', () => gratefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gratefulShutdown('SIGINT'));
 
