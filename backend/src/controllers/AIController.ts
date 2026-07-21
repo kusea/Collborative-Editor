@@ -14,7 +14,7 @@ const getAIClient = () => {
 
 export const handleAIEdit = async (req: Request, res: Response) => {
     try {
-        const { text, action} = req.body;
+        const { text, action, prompt} = req.body;
 
         if (!text) return res.status(400).json({ error: "Text is required" });
         if (!action) return res.status(400).json({ error: "Action is required" });
@@ -31,6 +31,10 @@ export const handleAIEdit = async (req: Request, res: Response) => {
             case 'summarize':
                 systemInstr = "You are a text summarization assistant. Summarize the provided text naturally and fluently in the same language as the original text.";
                 userPrompt = `Original text: \n\n${text}\n\n. Summarize the main points: \n`;
+                break;
+            case 'custom':
+                systemInstr = 'You are a professional text editing assistant.';
+                userPrompt = `Original text:\n"${text}"\n\nInstruction: ${prompt}`;
                 break;
             default:
                 return res.status(400).json({ error: "Invalid action" });

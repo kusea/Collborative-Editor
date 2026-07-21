@@ -33,6 +33,19 @@ export const AISidebar: React.FC<AISidebarProps> = ({ editor }) => {
         return editor.state.doc.textBetween(from, to, " ");
     };
 
+    const parseAIContent = (rawText: string) => {
+        const thinkRegex = /<think>([\s\S]*?)<\/think>/i;
+        const match = rawText.match(thinkRegex);
+
+        if (match) {
+            const thinking = match[1].trim();
+            const content = rawText.replace(thinkRegex, "").trim();
+            return { thinking, content };
+        }
+
+        return {thinking: null, content: rawText};
+    }
+
     const handleSendPrompt = async (customPrompt?: string, actionType: string = "custom") => {
         const promptToUse = customPrompt || inputPrompt;
         if (!promptToUse.trim()) return;
@@ -52,7 +65,7 @@ export const AISidebar: React.FC<AISidebarProps> = ({ editor }) => {
         setLoading(true);
 
         try {
-        // Gọi API Backend
+        // Call API Backend
             const data = await apiFetch("/ai/edit", {
                 method: "POST",
                 body: JSON.stringify({
@@ -62,13 +75,15 @@ export const AISidebar: React.FC<AISidebarProps> = ({ editor }) => {
                 }),
             });
 
+            const {thinking, content} = parseAIContent(data.result);
+
             if (data?.result) {
                 const aiMsg: Message = {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: data.result,
-                    thinking: data.thinking || "Processed context and generated text according to instruction.",
-                    suggestedText: data.result,
+                    content: content,
+                    thinking: thinking || "Processed context and generated text according to instruction.",
+                    suggestedText: content,
                 };
                 setMessages((prev) => [...prev, aiMsg]);
             }
@@ -78,6 +93,8 @@ export const AISidebar: React.FC<AISidebarProps> = ({ editor }) => {
         setLoading(false);
         }
     };
+
+    
 
     // Áp dụng đoạn văn mới vào Editor kèm Highlight vệt màu
     const handleApplyToEditor = (msgId: string, text: string) => {
@@ -228,7 +245,7 @@ export const AISidebar: React.FC<AISidebarProps> = ({ editor }) => {
 
             {/* Footer Input & Quick Options */}
             <div className="p-3 border-t border-slate-200 bg-slate-50 space-y-2">
-                {/* Quick Suggestions (Chức năng cũ chuyển thành gợi ý) */}
+                {/* Quick Suggestions */}
                 <div className="flex gap-1.5 overflow-x-auto pb-1">
                 <button
                     onClick={() => handleSendPrompt("Continue writing this document", "continue")}

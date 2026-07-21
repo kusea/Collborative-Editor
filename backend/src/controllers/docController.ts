@@ -1,11 +1,9 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../middlewares/auth.js";
 import { Document } from "../models/Document.js";
+import { User } from "../models/User.js";
 
-const createDocument = async (
-    req: AuthRequest,
-    res: Response,
-): Promise<void> => {
+const createDocument = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const { title } = req.body;
         const ownerId = req.userId;
@@ -33,10 +31,7 @@ const createDocument = async (
     }
 };
 
-const getDocument = async (
-    req: AuthRequest,
-    res: Response,
-): Promise<void> => {
+const getDocument = async (req: AuthRequest,res: Response): Promise<void> => {
     try {
         const ownerId = req.userId;
 
@@ -44,7 +39,7 @@ const getDocument = async (
             res.status(401).json({ message: "Not authorized" });
             return;
         }
-        const docs = await Document.find({ owner: ownerId })
+        const docs = await Document.find({ $or: [{ owner: ownerId }, { sharedWith: ownerId }] })
             .sort({ updatedAt: -1 })
             .lean();
 
@@ -56,10 +51,7 @@ const getDocument = async (
     }
 };
 
-const deleteDocument = async (
-    req: AuthRequest,
-    res: Response,
-): Promise<void> => {
+const deleteDocument = async (req: AuthRequest,res: Response): Promise<void> => {
     try {
         const { id } = req.params;
         const ownerId = req.userId;
@@ -89,8 +81,55 @@ const deleteDocument = async (
     }
 };
 
+const shareDocument = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { docId } = req.params;
+        const { email } = req.body;
+
+        if (!docId) {
+            res.status(400).json({ message: "Document ID is required" });
+            return;
+        }
+
+        if (!email) {
+            res.status(400).json({ message: "Email is required" });
+            return;
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            res.status(404).json({ message: "User with this email not found" });
+            return;
+        }
+
+        if(user._id.toString() === req.userId) {
+            res.status(400).json({ message: "You cannot share a document with yourself" });
+            return;
+        }
+
+        const document = await Document.findById(docId);
+        if (!document) {
+            res.status(404).json({ message: "Document not found" });
+            return;
+        }
+
+        if (!document.sharedWith.includes(user._id)) {
+            document.sharedWith.push(user._id);
+            await document.save();
+        }
+
+        res.status(200).json({ message: "Document shared successfully", sharedWith: user.email });
+        return;
+    } catch (error) {
+        res.status(500).json({ message: "Server error in sharing a document" });
+        console.log(`Error sharing a document: ${error}`);
+        return;
+    }
+};
+
 export const DocumentController = {
     createDocument,
     getDocument,
     deleteDocument,
+    shareDocument
 };

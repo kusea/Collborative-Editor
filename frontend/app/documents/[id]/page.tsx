@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import {EditorContent, Editor, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { ArrowLeft, Loader2, Save, Wifi, WifiOff, Italic, Bold, Underline } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Wifi, WifiOff, Italic, Bold, Underline, Share2 } from "lucide-react";
 import { apiFetch } from "../../utils/api";
 import Placeholder from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
@@ -15,6 +15,7 @@ import * as Y from "yjs";
 import { usePresenceTracking } from "./hooks/usePresenceTrack";
 import { PresenceOverlay } from "./components/PresenceOverlay";
 import { AISidebar } from "./components/AISidebar";
+import { ShareModal } from "./components/ShareModal";
 
 const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "");
@@ -38,6 +39,7 @@ export default function DocumentPage({ params }: PageProps) {
     const [docTitle, setDocTitle] = useState<string>("");
     const editorRef = useRef<Editor | null>(null);
     const [socket, setSocket] = useState<Socket | null>(null);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
@@ -245,6 +247,13 @@ export default function DocumentPage({ params }: PageProps) {
                         )}
                     </div>
 
+                    <button
+                        onClick={() => setIsShareModalOpen(true)}
+                        className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold transition cursor-pointer"
+                    >
+                        <Share2 size={16} /> Share
+                    </button>
+
                     <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow transition">
                         <Save size={16} /> Save (Offline)
                     </button>
@@ -288,6 +297,10 @@ export default function DocumentPage({ params }: PageProps) {
                     </div>
                 </div>
             </main>}
+
+            {isShareModalOpen && 
+            <ShareModal docId={docId} isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)}/>
+            }
         </div>
     );
 }
