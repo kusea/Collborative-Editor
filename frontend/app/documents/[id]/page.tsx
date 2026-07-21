@@ -9,10 +9,12 @@ import { ArrowLeft, Loader2, Save, Wifi, WifiOff, Italic, Bold, Underline } from
 import { apiFetch } from "../../utils/api";
 import Placeholder from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
+import Highlight from "@tiptap/extension-highlight";
 import * as Y from "yjs";
 
 import { usePresenceTracking } from "./hooks/usePresenceTrack";
-import { PresenceOverlayProps } from "./components/PresenceOverlay";
+import { PresenceOverlay } from "./components/PresenceOverlay";
+import { AISidebar } from "./components/AISidebar";
 
 const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "");
@@ -35,7 +37,7 @@ export default function DocumentPage({ params }: PageProps) {
     const [loading, setLoading] = useState(true);
     const [docTitle, setDocTitle] = useState<string>("");
     const editorRef = useRef<Editor | null>(null);
-    const socketRef = useRef<Socket | null>(null);
+    const [socket, setSocket] = useState<Socket | null>(null);
 
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
@@ -54,8 +56,10 @@ export default function DocumentPage({ params }: PageProps) {
             Collaboration.configure({
                 document: ydoc,
                 field: "shared-content"
-
             }),
+            Highlight.configure({
+                multicolor: true
+            })
         ],
         editorProps: {
             attributes: {
@@ -63,30 +67,32 @@ export default function DocumentPage({ params }: PageProps) {
             },
         },
         immediatelyRender: false,
-        onUpdate: () => {
-            if (editor) {
-                setIsBold(editor.isActive("bold"));
-                setIsItalic(editor.isActive("italic"));
-                setIsUnderline(editor.isActive("underline"));
-            }
+        onUpdate: ({editor}) => {
+            setIsBold(editor.isActive("bold"));
+            setIsItalic(editor.isActive("italic"));
+            setIsUnderline(editor.isActive("underline"));
+            
         },
-        onSelectionUpdate: () => {
-            if (editor) {
-                setIsBold(editor.isActive("bold"));
-                setIsItalic(editor.isActive("italic"));
-                setIsUnderline(editor.isActive("underline"));
-            }
+        onSelectionUpdate: ({editor}) => {
+            setIsBold(editor.isActive("bold"));
+            setIsItalic(editor.isActive("italic"));
+            setIsUnderline(editor.isActive("underline"));
+            const {from, to} = editor.state.selection;
+            const index = from;
+            const length = to - from;
+            emitSelectionChange({index: index, length: length});
+            
         }
     })
 
     const currentUser = useMemo(
         () => ({
-            id: localStorage.getItem("id") || "",
-            name: localStorage.getItem("name") || "",
-            color: localStorage.getItem("color") || "",
+            id: typeof window !== "undefined" ? localStorage.getItem("id") || "" : "",
+            name: typeof window !== "undefined" ? localStorage.getItem("name") || "Anonymous" : "Anonymous",
+            color: typeof window !== "undefined" ? localStorage.getItem("color") || "#3b82f6" : "#3b82f6",
         }),
         []
-    )
+    );
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -96,13 +102,17 @@ export default function DocumentPage({ params }: PageProps) {
             return;
         }
 
+        const createSocket = (token: string) => {
+            const socket = io(BACKEND_URL, {
+                auth: { token: token },
+                transports: ["websocket"]
+            });
+            setSocket(socket);
+            return socket;
+        }
         // 1. Kết nối tới Socket Server kèm theo token JWT trong handshake
-        const socketInstance = io(BACKEND_URL, {
-            auth: { token: token },
-            transports: ["websocket"],
-        });
-        socketRef.current = socketInstance;
-
+        const socketInstance = createSocket(token);
+        
         socketInstance.on("connect", () => {
             setConnected(true);
             console.log("Connected to WebSocket Server ✅");
@@ -177,21 +187,15 @@ export default function DocumentPage({ params }: PageProps) {
                 socketInstance.off("document-broadcast");
                 socketInstance.disconnect();
             }
-            socketRef.current = null;
+            setSocket(null);
         }
     }, [docId, router, ydoc]);
 
-    /* const { remotePresences, emitSelectionChange } = usePresenceTracking(
-        socketRef.current!,
+    const { remotePresences, emitSelectionChange } = usePresenceTracking(
+        socket,
         docId,
         currentUser
-    ) */
-
-    /* const handleSelect = () => {
-        if (editorRef.current) {
-            const start = editorRef.current.selectionStart;
-        }
-    } */
+    )
 
     if (loading) {
         return (
@@ -224,7 +228,7 @@ export default function DocumentPage({ params }: PageProps) {
                 {/* Status bar trạng thái kết nối WebSocket */}
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-sm font-medium">
-                        { !socketRef ? (
+                        { !socket ? (
                             <span className="text-rose-500 flex items-center gap-1">
                                 <WifiOff className="h-4 w-4 animate-pulse" />{" "}
                                 Internal Server Error ...
@@ -277,8 +281,10 @@ export default function DocumentPage({ params }: PageProps) {
                     </div>
 
                     {/* Editor Content Area */}
-                    <div className="flex-1">
-                        <EditorContent editor={editor} />
+                    <div className="flex-1 relative">
+                        <PresenceOverlay remotePresences={remotePresences} />
+                        <AISidebar editor = {editor}/>
+                        <EditorContent editor={editor} className = "-z-10"/>
                     </div>
                 </div>
             </main>}

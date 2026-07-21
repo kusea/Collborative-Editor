@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from "jsonwebtoken";
@@ -13,9 +15,6 @@ import { DocumentController } from './controllers/docController.js';
 import { documentBuffer } from './services/docBuffer.js';
 import { registerPresenceHandlers } from './socket/register-presence.js';
 import { handleAIEdit } from './controllers/AIController.js'; 
-
-
-dotenv.config();
 
 const app = express();
 

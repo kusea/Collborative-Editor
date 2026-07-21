@@ -26,7 +26,7 @@ interface PresenceOverlayProps {
     containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export const PresenceOverlayProps: React.FC<PresenceOverlayProps> = ({ remotePresences}) => {
+export const PresenceOverlay: React.FC<PresenceOverlayProps> = ({ remotePresences}) => {
     const presences = Object.values(remotePresences);
 
     if (presences.length === 0) return null;
