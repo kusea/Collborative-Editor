@@ -1,80 +1,23 @@
 'use client'; 
 
-import React from 'react';
-
-export interface UserPresence{
-    socketId: string;
-    user: {
-        id: string;
-        name: string;
-        color: string
-    };
-    range: {
-        index: number;
-        length: number
-    } | null;
-    coords?: {
-        top: number;
-        left: number;
-        height: number;
-        width?: number;
-    };
-}
+import React, { useEffect} from 'react';
+import { Editor } from '@tiptap/react';
+import { UserPresence } from '../hooks/usePresenceTrack';
+import { PresencePluginKey } from '../extensions/PresenceExtension';
 
 interface PresenceOverlayProps {
     remotePresences: Record<string, UserPresence>;
-    containerRef?: React.RefObject<HTMLDivElement | null>;
+    editor: Editor | null; 
 }
 
-export const PresenceOverlay: React.FC<PresenceOverlayProps> = ({ remotePresences}) => {
-    const presences = Object.values(remotePresences);
+export const PresenceOverlay: React.FC<PresenceOverlayProps> = ({ remotePresences, editor }) => {
+    useEffect(() => {
+        if(!editor || editor.isDestroyed) return;
 
-    if (presences.length === 0) return null;
-
-    return (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden z-20">
-            {presences.map((presence) => {
-                const { socketId, user, coords, range } = presence;
-
-                if (!coords || !range) return null;
-
-                const { top, left, height, width = 0} = coords;
-
-                return (
-                    <React.Fragment key = {socketId}>
-                        {/* Highlight area if other clients are highlighting (length > 0) */}
-                        {range.length > 0 && (
-                            <div
-                                className="absolute transition-all duration-75 rounded-sm opacity-35"
-                                style={{
-                                top: `${top}px`,
-                                left: `${left}px`,
-                                width: `${Math.max(width, 4)}px`,
-                                height: `${height}px`,
-                                backgroundColor: user.color || '#3b82f6',
-                                }}
-                            />
-                            )}
-
-                        {/* Blinking cursor and user badge/tag */}
-                        <div className="absolute w-0.5 transition-all duration-100 ease-out"
-                            style={{ 
-                                top: `${top}px`, 
-                                left: `${left + ((range.length > 0)? width : 0)}px`, 
-                                height: `${height}px`, 
-                                backgroundColor: user.color || '#3b82f6' }}
-                            >
-                                <div
-                                    className="absolute -top-6 left-0 text-[11px] font-medium text-white px-1.5 py-0.5 rounded-t-md rounded-br-md whitespace-nowrap shadow-sm flex items-center gap-1 select-none pointer-events-auto transition-transform hover:scale-105"
-                                    style={{ backgroundColor: user.color || '#3b82f6' }}
-                                >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                    {user.name}
-                                </div>
-                            </div>
-                    </React.Fragment>
-                )
-            })}
-        </div>
-    )
+        // Push the Remote Presence State to the ProseMirror Transaction for Editor
+        const tr = editor.state.tr;
+        tr.setMeta(PresencePluginKey, remotePresences);
+        editor.view.dispatch(tr);
+    }, [editor, remotePresences])
+    return null;
 }

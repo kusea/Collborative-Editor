@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Socket } from "socket.io-client";
 
-interface UserPresence {
+export interface UserPresence {
     socketId: string;
     user: {
         id: string;

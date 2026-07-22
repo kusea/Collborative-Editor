@@ -34,7 +34,7 @@ app.post('/api/documents', protect, DocumentController.createDocument);
 app.get('/api/documents', protect, DocumentController.getDocument);
 app.delete('/api/documents/:id', protect, DocumentController.deleteDocument);
 
-app.post('/api/:docId/share', protect, DocumentController.shareDocument);
+app.post('/api/documents/:docId/share', protect, DocumentController.shareDocument);
 
 //AI
 app.post('/api/ai/edit', protect, handleAIEdit);

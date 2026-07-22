@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, use, useRef, useMemo } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import {EditorContent, Editor, useEditor } from "@tiptap/react";
+import {EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { ArrowLeft, Loader2, Save, Wifi, WifiOff, Italic, Bold, Underline, Share2 } from "lucide-react";
 import { apiFetch } from "../../utils/api";
@@ -16,6 +16,7 @@ import { usePresenceTracking } from "./hooks/usePresenceTrack";
 import { PresenceOverlay } from "./components/PresenceOverlay";
 import { AISidebar } from "./components/AISidebar";
 import { ShareModal } from "./components/ShareModal";
+import { PresenceExtension } from "./extensions/PresenceExtension";
 
 const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "");
@@ -37,7 +38,6 @@ export default function DocumentPage({ params }: PageProps) {
     const [connected, setConnected] = useState(false);
     const [loading, setLoading] = useState(true);
     const [docTitle, setDocTitle] = useState<string>("");
-    const editorRef = useRef<Editor | null>(null);
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -61,11 +61,12 @@ export default function DocumentPage({ params }: PageProps) {
             }),
             Highlight.configure({
                 multicolor: true
-            })
+            }),
+            PresenceExtension // Register extension into tiptap
         ],
         editorProps: {
             attributes: {
-                class: "prose prose-sm m-5 focus:outline-none",
+                class: "prose prose-sm focus:outline-none min-h-125 w-full",
             },
         },
         immediatelyRender: false,
@@ -88,11 +89,16 @@ export default function DocumentPage({ params }: PageProps) {
     })
 
     const currentUser = useMemo(
-        () => ({
-            id: typeof window !== "undefined" ? localStorage.getItem("id") || "" : "",
-            name: typeof window !== "undefined" ? localStorage.getItem("name") || "Anonymous" : "Anonymous",
-            color: typeof window !== "undefined" ? localStorage.getItem("color") || "#3b82f6" : "#3b82f6",
-        }),
+        () => {
+            if (typeof window === "undefined") {
+                return { id: "", name: "Anonymous", color: "#3b82f6" };
+            }
+            return {
+                id: localStorage.getItem("id") || "Guest-",
+                name: localStorage.getItem("name") || "Guest User",
+                color: localStorage.getItem("color") || "#8b5cf6",
+            }
+        },
         []
     );
 
@@ -183,7 +189,6 @@ export default function DocumentPage({ params }: PageProps) {
         
         return () => {
             ydoc.off("update", handleYDocUpdate);
-            editorRef.current = null;
             if (socketInstance) {
                 socketInstance.off("init-document-state");
                 socketInstance.off("document-broadcast");
@@ -290,10 +295,13 @@ export default function DocumentPage({ params }: PageProps) {
                     </div>
 
                     {/* Editor Content Area */}
-                    <div className="flex-1 relative">
-                        <PresenceOverlay remotePresences={remotePresences} />
+                    <div className="relative w-full max-w-3xl mx-auto p-8">
+                        <PresenceOverlay 
+                            remotePresences={remotePresences} 
+                            editor = {editor}
+                        />
                         <AISidebar editor = {editor}/>
-                        <EditorContent editor={editor} className = "-z-10"/>
+                        <EditorContent editor={editor}/>
                     </div>
                 </div>
             </main>}

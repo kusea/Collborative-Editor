@@ -28,6 +28,25 @@ export default function Auth() {
 
             localStorage.setItem("token", data.token);
             localStorage.setItem("user", JSON.stringify(data.user));
+            localStorage.setItem("id", data.user._id);
+            localStorage.setItem("name", data.user.username);
+
+            if(!localStorage.getItem("color")){
+                const colors = 
+                    ["#ef4444" // Red 
+                    , "#f97316" // Orange
+                    , "#8b5cf6" // Purple
+                    , "#ec4899" // Pink
+                    , "#10b981" // Green
+                    , "#06b6d4" // Cyan
+                    , "#3b82f6" // Blue
+                    , "#f59e0b" // Amber
+                    , "#eab308" // Yellow
+                    , "#34d399" // Teal
+                ]
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                localStorage.setItem("color", randomColor);
+            }
 
             router.push("/dashboard");
         } catch (error) {
