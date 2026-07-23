@@ -35,36 +35,34 @@ export const PresenceExtension = Extension.create({
                     },
                     // State reducer: Take the old state + action transaction -> return new decoration state
                     apply(tr, oldSet) {
-                        const presence: Record<string, UserPresence> = tr.getMeta(PresencePluginKey) || {};
+                        const presences: Record<string, UserPresence> = tr.getMeta(PresencePluginKey) || {};
 
                         // If there is no new presence state, return the old state
-                        if (!presence) {
+                        if (!presences) {
                             return oldSet.map(tr.mapping, tr.doc);
                         }
 
                         const docSize = tr.doc.attrs.size;
 
                         // Generate decorations, convert from State Object to Decoration Array
-                        const decorations = Object.values(presence).flatMap(({user, range}) => {
+                        const decorations: Decoration[] = [];
+                        
+                        Object.values(presences).flatMap(({user, range}) => {
                             if (!range) return [];
 
                             const {index, length} = range;
                             const from = Math.max(Math.max(index, 0), docSize);
                             const to = Math.max(Math.max(index + length, 0), docSize);
 
-                            const items: Decoration[] = [];
-
                             // Add highlight inline
                             if (length > 0 && from < to) {
-                                items.push(Decoration.inline(from, to, {
+                                decorations.push(Decoration.inline(from, to, {
                                     style: `background-color: ${user.color || "#3b82f6"}40; border-radius: 2px;`,
                                     class: "remote-highlight",
                                 }))
                             }
                             // Cursor widget Decoration
-                            items.push(Decoration.widget(to, () => createCursorElement(user), {side: 1, key: user.id}));
-
-                            return items;
+                            decorations.push(Decoration.widget(to, createCursorElement({name: user.name, color: user.color}), {side: 1}));
                         });
 
                         return DecorationSet.create(tr.doc, decorations);

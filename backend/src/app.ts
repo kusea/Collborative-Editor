@@ -127,6 +127,14 @@ io.on("connection", (socket) => {
     })
 });
 
+app.use((req, res) => {
+    console.log(`❌ [404 Backend]: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({
+        error: `Cannot ${req.method} ${req.originalUrl}`,
+        suggestion: "Check if the route prefix matches backend/src/app.ts"
+    });
+});
+
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

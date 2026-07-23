@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useMemo } from "react";
+import { useEffect, useState, use, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import {EditorContent, useEditor } from "@tiptap/react";
@@ -34,6 +34,7 @@ export default function DocumentPage({ params }: PageProps) {
     // Un-wrap params của Next.js 16+
     const { id: docId } = use(params);
     const router = useRouter();
+    const containerRef = useRef<HTMLDivElement | null>(null);
 
     const [connected, setConnected] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -295,10 +296,13 @@ export default function DocumentPage({ params }: PageProps) {
                     </div>
 
                     {/* Editor Content Area */}
-                    <div className="relative w-full max-w-3xl mx-auto p-8">
+                    <div
+                        ref={containerRef} 
+                        className="relative w-full min-h-280 bg-white p-12 shadow-md border border-slate-200">
                         <PresenceOverlay 
                             remotePresences={remotePresences} 
                             editor = {editor}
+                            containerRef={containerRef}
                         />
                         <AISidebar editor = {editor}/>
                         <EditorContent editor={editor}/>

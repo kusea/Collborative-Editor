@@ -33,3 +33,14 @@ body {
   height: 0;
   pointer-events: none;
 }
+
+/* Ensure the cursor widget is above other elements */
+.remote-cursor-widget {
+  position: relative;
+  display: inline-block;
+  z-index: 20;
+}
+
+.remote-highlight {
+  transition: background-color 0.15s ease;
+}
